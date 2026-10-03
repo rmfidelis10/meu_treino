@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treino da semana</title>
+<style>
+  :root{
+    --bg: #15171A;
+    --surface: #1D2023;
+    --surface-2: #24282C;
+    --line: #33383D;
+    --text: #ECEAE5;
+    --muted: #9BA1A6;
+    --amber: #E8B23D;
+    --steel: #6E9BC4;
+    --done-bg: #1A1D1F;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family: Arial, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding: 32px 20px 80px;
+  }
+  .wrap{ max-width: 860px; margin:0 auto; }
+
+  .timer-bar{
+    position: sticky;
+    top: 12px;
+    z-index: 10;
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 28px;
+  }
+  .timer-bar .label{
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 2px;
+  }
+  .timer-bar .clock{
+    font-size: 28px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .timer-bar .clock.running{ color: var(--amber); }
+  .timer-controls{ display:flex; gap: 8px; }
+  .timer-controls button{
+    appearance:none; border:1px solid var(--line); background: var(--surface-2);
+    color: var(--text); font-size: 13px; font-weight: 700;
+    padding: 9px 16px; border-radius: 7px; cursor:pointer;
+  }
+  .timer-controls button:hover{ border-color: var(--muted); }
+  .timer-controls button.primary{
+    background: var(--amber); border-color: var(--amber); color: #1A1500;
+  }
+
+  header.hero{ margin-bottom: 36px; }
+  header.hero h1{
+    font-size: clamp(34px, 6vw, 52px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.02;
+    margin: 0 0 10px;
+  }
+  header.hero p{
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 46ch;
+    line-height: 1.5;
+    margin: 0;
+  }
+  header.hero .bar{
+    width: 64px; height: 5px; background: var(--amber);
+    margin-bottom: 18px; border-radius: 2px;
+  }
+
+  nav.days{
+    display:flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--line);
+  }
+  nav.days::-webkit-scrollbar{ display: none; }
+  nav.days button{
+    appearance:none; border:none; background:transparent;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 700;
+    padding: 10px 4px;
+    margin-right: 22px;
+    cursor:pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  nav.days button:hover{ color: var(--text); }
+  nav.days button.active{
+    color: var(--text);
+    border-bottom-color: var(--accent-color, var(--amber));
+  }
+
+  .day-panel{ display:none; }
+  .day-panel.active{ display:block; }
+
+  .day-top{
+    display:flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 18px 0 18px;
+  }
+  .day-focus{ color: var(--muted); font-size: 14px; margin:0; }
+  .day-focus strong{ color: var(--text); }
+  .progress{
+    font-size: 13px;
+    color: var(--accent-color, var(--amber));
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .reset-btn{
+    appearance:none; border:1px solid var(--line); background:transparent;
+    color: var(--muted); font-size: 12px; padding: 5px 10px; border-radius: 6px;
+    cursor:pointer; margin-left: 10px;
+  }
+  .reset-btn:hover{ color: var(--text); border-color: var(--muted); }
+
+  .complete-row{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+  }
+  .complete-row .count{
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .complete-row .count strong{
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 800;
+    margin-right: 5px;
+  }
+  .complete-btn{
+    appearance:none; border: 1px solid var(--accent-color, var(--amber));
+    background: transparent; color: var(--accent-color, var(--amber));
+    font-size: 13px; font-weight: 700; padding: 9px 16px;
+    border-radius: 7px; cursor:pointer; white-space: nowrap;
+  }
+  .complete-btn:hover{ background: var(--accent-color, var(--amber)); color: #1A1500; }
+
+  .total-bar{
+    text-align: right;
+    font-size: 13px;
+    color: var(--muted);
+    margin: -18px 0 20px;
+  }
+  .total-bar strong{ color: var(--text); }
+
+  .card{
+    display:flex;
+    align-items:center;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .card.done{
+    background: var(--done-bg);
+    border-color: var(--line);
+  }
+  .icon-box{
+    flex: 0 0 64px;
+    width: 64px; height: 64px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    display:flex; align-items:center; justify-content:center;
+    overflow: hidden;
+  }
+  .icon-box svg{ width: 100%; height: 100%; }
+  .card.done .icon-box{ opacity: 0.35; }
+  .card.done .icon-box svg *{ animation: none !important; }
+
+  .card-body{ flex:1; min-width:0; }
+  .card-body .name{
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .card.done .card-body .name{
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .card-body .sets{
+    font-size: 13.5px;
+    color: var(--accent-color, var(--amber));
+    font-weight: 700;
+  }
+  .card.done .card-body .sets{ color: var(--muted); }
+
+  .swap-select{
+    appearance:none;
+    -webkit-appearance:none;
+    display:block;
+    margin-top: 6px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+  }
+  .swap-select:hover{ color: var(--text); }
+  .swap-select option{ background: var(--surface-2); color: var(--text); }
+  .card.done .swap-select{ display: none; }
+
+  .remove-btn{
+    flex: 0 0 auto;
+    appearance:none; border:none; background:transparent;
+    color: var(--muted); font-size: 18px; line-height:1;
+    cursor:pointer; padding: 4px 6px;
+  }
+  .remove-btn:hover{ color: var(--text); }
+
+  .add-card{
+    border: 1px dashed var(--line);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .add-card:hover{ color: var(--text); border-color: var(--muted); }
+
+  .add-form{
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .add-form.open{ display: block; }
+  .add-form input{
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 9px 10px;
+    margin-bottom: 8px;
+  }
+  .add-form input::placeholder{ color: var(--muted); }
+  .add-form select{
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 9px 10px;
+    margin-bottom: 10px;
+  }
+  .add-form select option{ background: var(--surface-2); color: var(--text); }
+  .add-or{
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 8px;
+  }
+  .add-form .add-form-actions{ display:flex; gap: 8px; }
+  .add-form .add-form-actions button{
+    appearance:none; border:1px solid var(--line); background: var(--surface-2);
+    color: var(--text); font-size: 13px; font-weight: 700;
+    padding: 8px 14px; border-radius: 7px; cursor:pointer;
+  }
+  .add-form .add-form-actions button.save{
+    background: var(--accent-color, var(--amber)); border-color: var(--accent-color, var(--amber)); color:#1A1500;
+  }
+
+  .check{
+    flex: 0 0 30px;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    background: transparent;
+    cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
+    padding: 0;
+  }
+  .check svg{ width: 16px; height: 16px; opacity: 0; transition: opacity .1s ease; }
+  .check svg path{ stroke: var(--bg); }
+  .card.done .check{ background: var(--accent-color, var(--amber)); border-color: var(--accent-color, var(--amber)); }
+  .card.done .check svg{ opacity: 1; }
+
+  footer{
+    margin-top: 40px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+
+  @media (max-width: 480px){
+    .card{ gap: 12px; padding: 11px; }
+    .icon-box{ flex-basis: 52px; width:52px; height:52px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .icon-box *{ animation: none !important; }
+  }
+
+  /* ---- animations ---- */
+  @keyframes push{ 0%,100%{ transform: translateX(0); } 50%{ transform: translateX(10px); } }
+  @keyframes hinge{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-38deg); } }
+  @keyframes flyopen{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(28deg); } }
+  @keyframes flyopen-mirror{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-28deg); } }
+  @keyframes raise{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-58deg); } }
+  @keyframes vpulse{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-9px); } }
+  @keyframes pulltoward{ 0%,100%{ transform: translateX(0); } 50%{ transform: translateX(-10px); } }
+  @keyframes squat{ 0%,100%{ transform: translateY(0) scaleY(1); } 50%{ transform: translateY(7px) scaleY(0.86); } }
+  @keyframes hiphinge{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(24deg); } }
+
+  .anim-push{ animation: push 1.6s ease-in-out infinite; transform-origin: left center; }
+  .anim-hinge{ animation: hinge 1.6s ease-in-out infinite; transform-origin: 50% 20%; }
+  .anim-fly-l{ animation: flyopen 1.6s ease-in-out infinite; transform-origin: 100% 50%; }
+  .anim-fly-r{ animation: flyopen-mirror 1.6s ease-in-out infinite; transform-origin: 0% 50%; }
+  .anim-raise{ animation: raise 1.6s ease-in-out infinite; transform-origin: 100% 100%; }
+  .anim-vpulse{ animation: vpulse 1.3s ease-in-out infinite; }
+  .anim-pull{ animation: pulltoward 1.6s ease-in-out infinite; }
+  .anim-squat{ animation: squat 1.7s ease-in-out infinite; transform-origin: 50% 100%; }
+  .anim-hiphinge{ animation: hiphinge 1.7s ease-in-out infinite; transform-origin: 50% 62%; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="timer-bar">
+    <div>
+      <p class="label">Tempo de treino</p>
+      <p class="clock" id="clockDisplay">00:00:00</p>
+    </div>
+    <div class="timer-controls">
+      <button id="timerToggle" class="primary">Iniciar</button>
+      <button id="timerReset">Zerar</button>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="bar"></div>
+    <h1>Treino da semana</h1>
+    <p>Quatro dias, divididos entre quadríceps/peito e posterior/costas. Marque cada exercício ao terminá-lo.</p>
+  </header>
+
+  <nav class="days" id="dayNav">
+    <button data-day="seg" class="active">Segunda</button>
+    <button data-day="ter">Terça</button>
+    <button data-day="qua">Quarta</button>
+    <button data-day="qui">Quinta</button>
+    <button data-day="sex">Sexta</button>
+    <button data-day="sab">Sábado</button>
+    <button data-day="dom">Domingo</button>
+  </nav>
+
+  <p class="total-bar">Treinos completos no total: <strong id="totalCount">0</strong></p>
+
+
+  <!-- SEGUNDA -->
+  <section class="day-panel active" data-day="seg" style="--accent-color:#E8B23D">
+    <div class="day-top">
+      <p class="day-focus">Foco: <strong>quadríceps, peito e tríceps</strong></p>
+      <span><span class="progress" data-progress>0/6</span><button class="reset-btn" data-reset>Limpar</button></span>
+    </div>
+
+    <div class="complete-row">
+      <p class="count"><strong data-complete-count>0</strong>vezes concluído</p>
+      <button class="complete-btn" data-complete>Concluir treino</button>
+    </div>
+
+    <div class="card" data-ex="seg-1" data-category="quad">
+      <div class="icon-box"><svg viewBox="0 0 100 100"><g class="anim-push">
+        <rect x="15" y="45" width="18" height="10" rx="2" fill="#8B9096"/>
+        <rect x="33" y="42" width="6" height="16" fill="#E8B23D"/>
+        <rect x="39" y="30" width="6" height="40" fill="#E8B23D"/>
+      </g></svg></div>
+      <div class="card-body"><p class="name">Leg press</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="seg-1" data-category="quad"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="seg-2" data-category="quad">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="30" x2="50" y2="55" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge"><line x1="50" y1="55" x2="50" y2="80" stroke="#E8B23D" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Cadeira extensora</p><p class="sets">3 séries × 10–15</p><select class="swap-select" data-slot="seg-2" data-category="quad"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="seg-3" data-category="peito">
+      <div class="icon-box"><svg viewBox="0 0 100 100"><g class="anim-push">
+        <rect x="18" y="46" width="16" height="8" rx="2" fill="#8B9096"/>
+        <rect x="34" y="42" width="6" height="16" fill="#E8B23D"/>
+        <rect x="40" y="34" width="30" height="6" rx="2" fill="#E8B23D"/>
+      </g></svg></div>
+      <div class="card-body"><p class="name">Supino reto (máquina ou halteres)</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="seg-3" data-category="peito"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="seg-4" data-category="peito">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="5" fill="#8B9096"/>
+        <g class="anim-fly-l"><line x1="50" y1="50" x2="20" y2="50" stroke="#E8B23D" stroke-width="6" stroke-linecap="round"/></g>
+        <g class="anim-fly-r"><line x1="50" y1="50" x2="80" y2="50" stroke="#E8B23D" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Crucifixo na máquina</p><p class="sets">2 séries × 10–15</p><select class="swap-select" data-slot="seg-4" data-category="peito"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="seg-5" data-category="ombro">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="50" cy="70" r="5" fill="#8B9096"/>
+        <g class="anim-raise"><line x1="50" y1="70" x2="50" y2="30" stroke="#E8B23D" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Elevação lateral</p><p class="sets">2 séries × 12–15</p><select class="swap-select" data-slot="seg-5" data-category="ombro"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="seg-6" data-category="triceps">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="20" x2="50" y2="45" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge" style="transform-origin:50% 45%"><line x1="50" y1="45" x2="50" y2="80" stroke="#E8B23D" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Tríceps na corda</p><p class="sets">3 séries × 10–15</p><select class="swap-select" data-slot="seg-6" data-category="triceps"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </section>
+
+  <!-- TERÇA -->
+  <section class="day-panel" data-day="ter" style="--accent-color:#6E9BC4">
+    <div class="day-top">
+      <p class="day-focus">Foco: <strong>posterior, glúteos, costas e bíceps</strong></p>
+      <span><span class="progress" data-progress>0/6</span><button class="reset-btn" data-reset>Limpar</button></span>
+    </div>
+
+    <div class="complete-row">
+      <p class="count"><strong data-complete-count>0</strong>vezes concluído</p>
+      <button class="complete-btn" data-complete>Concluir treino</button>
+    </div>
+
+    <div class="card" data-ex="ter-1" data-category="gluteo">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <rect x="20" y="70" width="60" height="6" fill="#33383D"/>
+        <g class="anim-vpulse"><rect x="30" y="45" width="40" height="14" rx="4" fill="#6E9BC4"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Elevação pélvica</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="ter-1" data-category="gluteo"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="ter-2" data-category="posterior">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="30" x2="50" y2="55" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge"><line x1="50" y1="55" x2="50" y2="80" stroke="#6E9BC4" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Mesa ou cadeira flexora</p><p class="sets">3 séries × 10–15</p><select class="swap-select" data-slot="ter-2" data-category="posterior"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="ter-3" data-category="panturrilha">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <rect x="35" y="60" width="30" height="10" fill="#33383D"/>
+        <g class="anim-vpulse" style="animation-duration:1s"><rect x="42" y="35" width="16" height="26" rx="3" fill="#6E9BC4"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Panturrilha sentada</p><p class="sets">3 séries × 12–20</p><select class="swap-select" data-slot="ter-3" data-category="panturrilha"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="ter-4" data-category="costas">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="75" cy="30" r="5" fill="#8B9096"/>
+        <line x1="75" y1="30" x2="75" y2="75" stroke="#33383D" stroke-width="4"/>
+        <g class="anim-pull"><rect x="55" y="30" width="14" height="6" rx="2" fill="#6E9BC4"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Puxada pela frente</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="ter-4" data-category="costas"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="ter-5" data-category="costas">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="30" cy="50" r="5" fill="#8B9096"/>
+        <g class="anim-pull" style="animation-direction:reverse"><rect x="45" y="47" width="20" height="6" rx="2" fill="#6E9BC4"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Remada sentada</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="ter-5" data-category="costas"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="ter-6" data-category="biceps">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="20" x2="50" y2="45" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge" style="transform-origin:50% 45%"><line x1="50" y1="45" x2="50" y2="80" stroke="#6E9BC4" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Rosca direta</p><p class="sets">2 séries × 10–15</p><select class="swap-select" data-slot="ter-6" data-category="biceps"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </section>
+
+  <!-- QUINTA -->
+  <section class="day-panel" data-day="qui" style="--accent-color:#E8B23D">
+    <div class="day-top">
+      <p class="day-focus">Foco: <strong>quadríceps, peito e ombros</strong></p>
+      <span><span class="progress" data-progress>0/6</span><button class="reset-btn" data-reset>Limpar</button></span>
+    </div>
+
+    <div class="complete-row">
+      <p class="count"><strong data-complete-count>0</strong>vezes concluído</p>
+      <button class="complete-btn" data-complete>Concluir treino</button>
+    </div>
+
+    <div class="card" data-ex="qui-1" data-category="quad">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <rect x="30" y="75" width="40" height="6" fill="#33383D"/>
+        <g class="anim-squat"><rect x="40" y="35" width="20" height="35" rx="4" fill="#E8B23D"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Agachamento no Smith</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="qui-1" data-category="quad"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="qui-2" data-category="quad">
+      <div class="icon-box"><svg viewBox="0 0 100 100"><g class="anim-push">
+        <rect x="15" y="45" width="18" height="10" rx="2" fill="#8B9096"/>
+        <rect x="33" y="42" width="6" height="16" fill="#E8B23D"/>
+        <rect x="39" y="30" width="6" height="40" fill="#E8B23D"/>
+      </g></svg></div>
+      <div class="card-body"><p class="name">Leg press unilateral</p><p class="sets">3 séries × 10–12 por perna</p><select class="swap-select" data-slot="qui-2" data-category="quad"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="qui-3" data-category="quad">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="30" x2="50" y2="55" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge"><line x1="50" y1="55" x2="50" y2="80" stroke="#E8B23D" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Cadeira extensora</p><p class="sets">2 séries × 12–15</p><select class="swap-select" data-slot="qui-3" data-category="quad"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="qui-4" data-category="peito">
+      <div class="icon-box"><svg viewBox="0 0 100 100"><g class="anim-push">
+        <rect x="18" y="55" width="16" height="8" rx="2" fill="#8B9096"/>
+        <rect x="34" y="48" width="6" height="18" fill="#E8B23D"/>
+        <rect x="40" y="28" width="30" height="6" rx="2" fill="#E8B23D"/>
+      </g></svg></div>
+      <div class="card-body"><p class="name">Supino inclinado</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="qui-4" data-category="peito"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="qui-5" data-category="ombro">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="50" cy="70" r="5" fill="#8B9096"/>
+        <line x1="50" y1="70" x2="50" y2="35" stroke="#33383D" stroke-width="4"/>
+        <g class="anim-vpulse"><rect x="38" y="20" width="24" height="8" rx="2" fill="#E8B23D"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Desenvolvimento na máquina</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="qui-5" data-category="ombro"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="qui-6" data-category="ombro">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="50" cy="70" r="5" fill="#8B9096"/>
+        <g class="anim-raise"><line x1="50" y1="70" x2="50" y2="30" stroke="#E8B23D" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Elevação lateral</p><p class="sets">2 séries × 12–15</p><select class="swap-select" data-slot="qui-6" data-category="ombro"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </section>
+
+  <!-- SEXTA -->
+  <section class="day-panel" data-day="sex" style="--accent-color:#6E9BC4">
+    <div class="day-top">
+      <p class="day-focus">Foco: <strong>posterior, glúteos, costas e braços</strong></p>
+      <span><span class="progress" data-progress>0/6</span><button class="reset-btn" data-reset>Limpar</button></span>
+    </div>
+
+    <div class="complete-row">
+      <p class="count"><strong data-complete-count>0</strong>vezes concluído</p>
+      <button class="complete-btn" data-complete>Concluir treino</button>
+    </div>
+
+    <div class="card" data-ex="sex-1" data-category="posterior">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="50" cy="25" r="6" fill="#8B9096"/>
+        <line x1="50" y1="31" x2="50" y2="55" stroke="#8B9096" stroke-width="5"/>
+        <g class="anim-hiphinge"><line x1="50" y1="55" x2="50" y2="85" stroke="#6E9BC4" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Stiff com halteres</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="sex-1" data-category="posterior"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="sex-2" data-category="posterior">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="30" x2="50" y2="55" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge"><line x1="50" y1="55" x2="50" y2="80" stroke="#6E9BC4" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Cadeira flexora</p><p class="sets">3 séries × 10–15</p><select class="swap-select" data-slot="sex-2" data-category="posterior"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="sex-3" data-category="gluteo">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <rect x="20" y="70" width="60" height="6" fill="#33383D"/>
+        <g class="anim-vpulse"><rect x="30" y="45" width="40" height="14" rx="4" fill="#6E9BC4"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Elevação pélvica</p><p class="sets">3 séries × 10–12</p><select class="swap-select" data-slot="sex-3" data-category="gluteo"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="sex-4" data-category="costas">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <circle cx="75" cy="30" r="5" fill="#8B9096"/>
+        <line x1="75" y1="30" x2="75" y2="75" stroke="#33383D" stroke-width="4"/>
+        <g class="anim-pull"><rect x="55" y="30" width="14" height="6" rx="2" fill="#6E9BC4"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Puxada com pegada neutra</p><p class="sets">3 séries × 8–12</p><select class="swap-select" data-slot="sex-4" data-category="costas"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="sex-5" data-category="biceps">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="20" x2="50" y2="45" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge" style="transform-origin:50% 45%"><line x1="50" y1="45" x2="50" y2="80" stroke="#6E9BC4" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Rosca martelo</p><p class="sets">2 séries × 10–15</p><select class="swap-select" data-slot="sex-5" data-category="biceps"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+
+    <div class="card" data-ex="sex-6" data-category="triceps">
+      <div class="icon-box"><svg viewBox="0 0 100 100">
+        <line x1="50" y1="20" x2="50" y2="45" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/>
+        <g class="anim-hinge" style="transform-origin:50% 45%"><line x1="50" y1="45" x2="50" y2="80" stroke="#6E9BC4" stroke-width="6" stroke-linecap="round"/></g>
+      </svg></div>
+      <div class="card-body"><p class="name">Tríceps francês ou na polia</p><p class="sets">2 séries × 10–15</p><select class="swap-select" data-slot="sex-6" data-category="triceps"><option value="" selected disabled>Trocar exercício</option></select></div>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </section>
+
+  <!-- QUARTA (livre) -->
+  <section class="day-panel" data-day="qua" style="--accent-color:#9BA1A6">
+    <div class="day-top">
+      <p class="day-focus">Foco: <strong>a definir</strong></p>
+      <span><span class="progress" data-progress>0/0</span><button class="reset-btn" data-reset>Limpar</button></span>
+    </div>
+    <div class="complete-row">
+      <p class="count"><strong data-complete-count>0</strong>vezes concluído</p>
+      <button class="complete-btn" data-complete>Concluir treino</button>
+    </div>
+  </section>
+
+  <!-- SÁBADO (livre) -->
+  <section class="day-panel" data-day="sab" style="--accent-color:#9BA1A6">
+    <div class="day-top">
+      <p class="day-focus">Foco: <strong>a definir</strong></p>
+      <span><span class="progress" data-progress>0/0</span><button class="reset-btn" data-reset>Limpar</button></span>
+    </div>
+    <div class="complete-row">
+      <p class="count"><strong data-complete-count>0</strong>vezes concluído</p>
+      <button class="complete-btn" data-complete>Concluir treino</button>
+    </div>
+  </section>
+
+  <!-- DOMINGO (livre) -->
+  <section class="day-panel" data-day="dom" style="--accent-color:#9BA1A6">
+    <div class="day-top">
+      <p class="day-focus">Foco: <strong>a definir</strong></p>
+      <span><span class="progress" data-progress>0/0</span><button class="reset-btn" data-reset>Limpar</button></span>
+    </div>
+    <div class="complete-row">
+      <p class="count"><strong data-complete-count>0</strong>vezes concluído</p>
+      <button class="complete-btn" data-complete>Concluir treino</button>
+    </div>
+  </section>
+
+  <footer>
+    Marque um exercício ao concluí-lo — o progresso fica salvo neste dispositivo. Use "Trocar exercício" abaixo de cada série para substituir por uma variação do mesmo grupo muscular, ou "Adicionar exercício" para incluir um novo.
+  </footer>
+
+</div>
+
+<script>
+  const DAY_COLOR = { seg:'#E8B23D', ter:'#6E9BC4', qua:'#9BA1A6', qui:'#E8B23D', sex:'#6E9BC4', sab:'#9BA1A6', dom:'#9BA1A6' };
+
+  const ICON_BUILDERS = {
+    custom: (c) => `<circle cx="28" cy="50" r="9" fill="${c}"/><circle cx="72" cy="50" r="9" fill="${c}"/><line x1="28" y1="50" x2="72" y2="50" stroke="${c}" stroke-width="6"/>`,
+    push: (c) => `<g class="anim-push"><rect x="15" y="45" width="18" height="10" rx="2" fill="#8B9096"/><rect x="33" y="42" width="6" height="16" fill="${c}"/><rect x="39" y="30" width="6" height="40" fill="${c}"/></g>`,
+    hinge: (c) => `<line x1="50" y1="30" x2="50" y2="55" stroke="#8B9096" stroke-width="6" stroke-linecap="round"/><g class="anim-hinge"><line x1="50" y1="55" x2="50" y2="80" stroke="${c}" stroke-width="6" stroke-linecap="round"/></g>`,
+    fly: (c) => `<circle cx="50" cy="50" r="5" fill="#8B9096"/><g class="anim-fly-l"><line x1="50" y1="50" x2="20" y2="50" stroke="${c}" stroke-width="6" stroke-linecap="round"/></g><g class="anim-fly-r"><line x1="50" y1="50" x2="80" y2="50" stroke="${c}" stroke-width="6" stroke-linecap="round"/></g>`,
+    raise: (c) => `<circle cx="50" cy="70" r="5" fill="#8B9096"/><g class="anim-raise"><line x1="50" y1="70" x2="50" y2="30" stroke="${c}" stroke-width="6" stroke-linecap="round"/></g>`,
+    vpulse: (c) => `<rect x="20" y="70" width="60" height="6" fill="#33383D"/><g class="anim-vpulse"><rect x="30" y="45" width="40" height="14" rx="4" fill="${c}"/></g>`,
+    pull: (c) => `<circle cx="75" cy="30" r="5" fill="#8B9096"/><line x1="75" y1="30" x2="75" y2="75" stroke="#33383D" stroke-width="4"/><g class="anim-pull"><rect x="55" y="30" width="14" height="6" rx="2" fill="${c}"/></g>`,
+    squat: (c) => `<rect x="30" y="75" width="40" height="6" fill="#33383D"/><g class="anim-squat"><rect x="40" y="35" width="20" height="35" rx="4" fill="${c}"/></g>`,
+    hiphinge: (c) => `<circle cx="50" cy="25" r="6" fill="#8B9096"/><line x1="50" y1="31" x2="50" y2="55" stroke="#8B9096" stroke-width="5"/><g class="anim-hiphinge"><line x1="50" y1="55" x2="50" y2="85" stroke="${c}" stroke-width="6" stroke-linecap="round"/></g>`
+  };
+
+  function renderIconSVG(type, color){
+    return `<svg viewBox="0 0 100 100">${ICON_BUILDERS[type](color)}</svg>`;
+  }
+
+  const EXERCISE_LIBRARY = {
+    quad: [
+      { name:'Leg press', sets:'3 séries × 8–12', icon:'push' },
+      { name:'Leg press unilateral', sets:'3 séries × 10–12 por perna', icon:'push' },
+      { name:'Cadeira extensora', sets:'3 séries × 10–15', icon:'hinge' },
+      { name:'Agachamento no Smith', sets:'3 séries × 8–12', icon:'squat' },
+      { name:'Agachamento livre', sets:'3 séries × 8–12', icon:'squat' },
+      { name:'Afundo', sets:'3 séries × 10–12 por perna', icon:'squat' },
+      { name:'Hack machine', sets:'3 séries × 8–12', icon:'push' }
+    ],
+    peito: [
+      { name:'Supino reto (máquina ou halteres)', sets:'3 séries × 8–12', icon:'push' },
+      { name:'Supino inclinado', sets:'3 séries × 8–12', icon:'push' },
+      { name:'Crucifixo na máquina', sets:'2 séries × 10–15', icon:'fly' },
+      { name:'Crossover', sets:'3 séries × 10–15', icon:'fly' },
+      { name:'Peck deck', sets:'3 séries × 10–15', icon:'fly' }
+    ],
+    triceps: [
+      { name:'Tríceps na corda', sets:'3 séries × 10–15', icon:'hinge' },
+      { name:'Tríceps francês ou na polia', sets:'2 séries × 10–15', icon:'hinge' },
+      { name:'Tríceps testa', sets:'3 séries × 10–12', icon:'hinge' },
+      { name:'Mergulho no banco', sets:'3 séries × 10–15', icon:'push' }
+    ],
+    ombro: [
+      { name:'Elevação lateral', sets:'2 séries × 12–15', icon:'raise' },
+      { name:'Desenvolvimento na máquina', sets:'3 séries × 8–12', icon:'vpulse' },
+      { name:'Desenvolvimento com halteres', sets:'3 séries × 8–12', icon:'vpulse' },
+      { name:'Elevação frontal', sets:'2 séries × 12–15', icon:'raise' }
+    ],
+    posterior: [
+      { name:'Mesa ou cadeira flexora', sets:'3 séries × 10–15', icon:'hinge' },
+      { name:'Cadeira flexora', sets:'3 séries × 10–15', icon:'hinge' },
+      { name:'Stiff com halteres', sets:'3 séries × 8–12', icon:'hiphinge' },
+      { name:'Stiff com barra', sets:'3 séries × 8–12', icon:'hiphinge' }
+    ],
+    gluteo: [
+      { name:'Elevação pélvica', sets:'3 séries × 8–12', icon:'vpulse' },
+      { name:'Elevação pélvica unilateral', sets:'3 séries × 10–12 por perna', icon:'vpulse' },
+      { name:'Cadeira abdutora', sets:'3 séries × 12–15', icon:'fly' },
+      { name:'Coice no cabo', sets:'3 séries × 12–15 por perna', icon:'raise' }
+    ],
+    costas: [
+      { name:'Puxada pela frente', sets:'3 séries × 8–12', icon:'pull' },
+      { name:'Puxada com pegada neutra', sets:'3 séries × 8–12', icon:'pull' },
+      { name:'Remada sentada', sets:'3 séries × 8–12', icon:'pull' },
+      { name:'Remada curvada', sets:'3 séries × 8–12', icon:'hiphinge' },
+      { name:'Pulldown unilateral', sets:'3 séries × 10–12 por lado', icon:'pull' }
+    ],
+    biceps: [
+      { name:'Rosca direta', sets:'2 séries × 10–15', icon:'hinge' },
+      { name:'Rosca martelo', sets:'2 séries × 10–15', icon:'hinge' },
+      { name:'Rosca scott', sets:'3 séries × 10–12', icon:'hinge' },
+      { name:'Rosca concentrada', sets:'2 séries × 10–12 por braço', icon:'hinge' }
+    ],
+    panturrilha: [
+      { name:'Panturrilha sentada', sets:'3 séries × 12–20', icon:'vpulse' },
+      { name:'Panturrilha em pé', sets:'3 séries × 12–20', icon:'vpulse' },
+      { name:'Panturrilha no leg press', sets:'3 séries × 12–20', icon:'vpulse' }
+    ]
+  };
+
+  function applyExercise(card, entry, color){
+    card.querySelector('.name').textContent = entry.name;
+    card.querySelector('.sets').textContent = entry.sets;
+    card.querySelector('.icon-box').innerHTML = renderIconSVG(entry.icon, color);
+  }
+
+  function populateSwapSelects(){
+    document.querySelectorAll('.swap-select').forEach(sel => {
+      const cat = sel.dataset.category;
+      const list = EXERCISE_LIBRARY[cat] || [];
+      list.forEach((entry, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = entry.name;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  const SWAPS_PREFIX = 'treino-swaps:';
+  let swapsMemory = {};
+
+  async function loadSwaps(day){
+    try{
+      const raw = localStorage.getItem(SWAPS_PREFIX + day);
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){
+      return swapsMemory[day] || {};
+    }
+  }
+
+  async function saveSwaps(day, swaps){
+    try{
+      localStorage.setItem(SWAPS_PREFIX + day, JSON.stringify(swaps));
+    }catch(e){
+      swapsMemory[day] = swaps;
+    }
+  }
+
+  async function applySavedSwaps(panel){
+    const day = panel.dataset.day;
+    const color = DAY_COLOR[day];
+    const swaps = await loadSwaps(day);
+    Object.keys(swaps).forEach(slot => {
+      const card = panel.querySelector(`.card[data-ex="${slot}"]`);
+      if(!card) return;
+      const cat = card.dataset.category;
+      const entry = EXERCISE_LIBRARY[cat] && EXERCISE_LIBRARY[cat][swaps[slot]];
+      if(entry) applyExercise(card, entry, color);
+    });
+  }
+
+  document.addEventListener('change', async (e) => {
+    const sel = e.target.closest('.swap-select');
+    if(!sel) return;
+    const card = sel.closest('.card');
+    const panel = sel.closest('.day-panel');
+    const day = panel.dataset.day;
+    const idx = sel.value;
+    const entry = EXERCISE_LIBRARY[sel.dataset.category][idx];
+    applyExercise(card, entry, DAY_COLOR[day]);
+    sel.value = '';
+    const swaps = await loadSwaps(day);
+    swaps[sel.dataset.slot] = idx;
+    await saveSwaps(day, swaps);
+  });
+
+  populateSwapSelects();
+
+  // ---- exercícios personalizados (adicionar / remover) ----
+  const CUSTOM_PREFIX = 'treino-custom:';
+  let customMemory = {};
+
+  async function loadCustom(day){
+    try{
+      const raw = localStorage.getItem(CUSTOM_PREFIX + day);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){
+      return customMemory[day] || [];
+    }
+  }
+
+  async function saveCustom(day, list){
+    try{
+      localStorage.setItem(CUSTOM_PREFIX + day, JSON.stringify(list));
+    }catch(e){
+      customMemory[day] = list;
+    }
+  }
+
+  function buildCustomCardEl(day, item, color){
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.dataset.ex = item.id;
+    div.innerHTML = `
+      <div class="icon-box"><svg viewBox="0 0 100 100">${ICON_BUILDERS.custom(color)}</svg></div>
+      <div class="card-body"><p class="name"></p><p class="sets"></p></div>
+      <button class="remove-btn" data-remove title="Remover">×</button>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    `;
+    div.querySelector('.name').textContent = item.name;
+    div.querySelector('.sets').textContent = item.sets || '';
+    return div;
+  }
+
+  const CATEGORY_LABELS = {
+    quad: 'Quadríceps',
+    peito: 'Peito',
+    triceps: 'Tríceps',
+    ombro: 'Ombros',
+    posterior: 'Posterior de coxa',
+    gluteo: 'Glúteos',
+    costas: 'Costas',
+    biceps: 'Bíceps',
+    panturrilha: 'Panturrilha'
+  };
+
+  function buildLibrarySelectOptionsHTML(){
+    let html = '<option value="" selected>Escolher da lista de exercícios</option>';
+    Object.keys(CATEGORY_LABELS).forEach(cat => {
+      html += `<optgroup label="${CATEGORY_LABELS[cat]}">`;
+      EXERCISE_LIBRARY[cat].forEach((entry, idx) => {
+        html += `<option value="${cat}|${idx}">${entry.name}</option>`;
+      });
+      html += '</optgroup>';
+    });
+    return html;
+  }
+
+  function buildLibraryCardEl(day, cat, idx, color){
+    const entry = EXERCISE_LIBRARY[cat][idx];
+    const slotId = 'lib-' + day + '-' + Date.now() + '-' + Math.floor(Math.random()*1000);
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.dataset.ex = slotId;
+    div.dataset.category = cat;
+    div.innerHTML = `
+      <div class="icon-box">${renderIconSVG(entry.icon, color)}</div>
+      <div class="card-body">
+        <p class="name">${entry.name}</p>
+        <p class="sets">${entry.sets}</p>
+        <select class="swap-select" data-slot="${slotId}" data-category="${cat}">
+          <option value="" selected disabled>Trocar exercício</option>
+        </select>
+      </div>
+      <button class="remove-btn" data-remove title="Remover">×</button>
+      <button class="check" data-check><svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    `;
+    const sel = div.querySelector('.swap-select');
+    EXERCISE_LIBRARY[cat].forEach((e, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = e.name;
+      sel.appendChild(opt);
+    });
+    return { el: div, slotId };
+  }
+
+  function buildAddUI(day){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <button class="add-card" data-add-trigger>+ Adicionar exercício</button>
+      <div class="add-form" data-add-form>
+        <select data-add-select>${buildLibrarySelectOptionsHTML()}</select>
+        <p class="add-or">ou digite um exercício personalizado:</p>
+        <input type="text" placeholder="Nome do exercício" data-add-name maxlength="60">
+        <input type="text" placeholder="Séries × repetições (ex: 3 × 10–12)" data-add-sets maxlength="40">
+        <div class="add-form-actions">
+          <button class="save" data-add-save>Adicionar</button>
+          <button data-add-cancel>Cancelar</button>
+        </div>
+      </div>
+    `;
+    return wrap;
+  }
+
+  async function renderCustomCards(panel){
+    const day = panel.dataset.day;
+    const color = DAY_COLOR[day];
+    const list = await loadCustom(day);
+    list.forEach(item => {
+      panel.appendChild(buildCustomCardEl(day, item, color));
+    });
+  }
+
+  const LIBADDED_PREFIX = 'treino-libadded:';
+  let libAddedMemory = {};
+
+  async function loadLibAdded(day){
+    try{
+      const raw = localStorage.getItem(LIBADDED_PREFIX + day);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){
+      return libAddedMemory[day] || [];
+    }
+  }
+
+  async function saveLibAdded(day, list){
+    try{
+      localStorage.setItem(LIBADDED_PREFIX + day, JSON.stringify(list));
+    }catch(e){
+      libAddedMemory[day] = list;
+    }
+  }
+
+  async function renderLibAddedCards(panel){
+    const day = panel.dataset.day;
+    const color = DAY_COLOR[day];
+    const list = await loadLibAdded(day);
+    list.forEach(item => {
+      const { el } = buildLibraryCardEl(day, item.category, item.idx, color);
+      el.dataset.ex = item.id;
+      el.querySelector('.swap-select').dataset.slot = item.id;
+      panel.appendChild(el);
+    });
+  }
+
+  function addAddCardUI(panel){
+    const ui = buildAddUI(panel.dataset.day);
+    panel.appendChild(ui);
+  }
+
+
+  document.addEventListener('click', async (e) => {
+    const trigger = e.target.closest('[data-add-trigger]');
+    if(trigger){
+      const form = trigger.nextElementSibling;
+      form.classList.add('open');
+      trigger.style.display = 'none';
+      return;
+    }
+    const cancel = e.target.closest('[data-add-cancel]');
+    if(cancel){
+      const form = cancel.closest('[data-add-form]');
+      form.classList.remove('open');
+      form.previousElementSibling.style.display = '';
+      form.querySelector('[data-add-name]').value = '';
+      form.querySelector('[data-add-sets]').value = '';
+      form.querySelector('[data-add-select]').value = '';
+      return;
+    }
+    const save = e.target.closest('[data-add-save]');
+    if(save){
+      const form = save.closest('[data-add-form]');
+      const panel = form.closest('.day-panel');
+      const day = panel.dataset.day;
+      const select = form.querySelector('[data-add-select]');
+
+      if(select.value){
+        const [cat, idxStr] = select.value.split('|');
+        const idx = parseInt(idxStr, 10);
+        const { el, slotId } = buildLibraryCardEl(day, cat, idx, DAY_COLOR[day]);
+        form.parentNode.insertBefore(el, form.previousElementSibling);
+        const list = await loadLibAdded(day);
+        list.push({ id: slotId, category: cat, idx });
+        await saveLibAdded(day, list);
+        updateProgress(panel);
+        select.value = '';
+        form.classList.remove('open');
+        form.previousElementSibling.style.display = '';
+        return;
+      }
+
+      const nameInput = form.querySelector('[data-add-name]');
+      const setsInput = form.querySelector('[data-add-sets]');
+      const name = nameInput.value.trim();
+      if(!name) { nameInput.focus(); return; }
+      const sets = setsInput.value.trim();
+      const item = { id: 'custom-' + day + '-' + Date.now(), name, sets };
+      const card = buildCustomCardEl(day, item, DAY_COLOR[day]);
+      form.parentNode.insertBefore(card, form.previousElementSibling);
+      const list = await loadCustom(day);
+      list.push(item);
+      await saveCustom(day, list);
+      updateProgress(panel);
+      nameInput.value = '';
+      setsInput.value = '';
+      form.classList.remove('open');
+      form.previousElementSibling.style.display = '';
+      return;
+    }
+    const remove = e.target.closest('[data-remove]');
+    if(remove){
+      const card = remove.closest('.card');
+      const panel = card.closest('.day-panel');
+      const day = panel.dataset.day;
+      const id = card.dataset.ex;
+      card.remove();
+      const custom = (await loadCustom(day)).filter(it => it.id !== id);
+      await saveCustom(day, custom);
+      const libAdded = (await loadLibAdded(day)).filter(it => it.id !== id);
+      await saveLibAdded(day, libAdded);
+      const doneList = (await (async () => { try{ const raw = localStorage.getItem('treino-checks:' + day); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } })()).filter(x => x !== id);
+      await saveDay(day, doneList);
+      updateProgress(panel);
+    }
+  });
+
+  const STORAGE_PREFIX = 'treino-checks:';
+  let memoryFallback = {};
+
+  async function loadDay(day){
+    try{
+      const raw = localStorage.getItem(STORAGE_PREFIX + day);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){
+      return memoryFallback[day] || [];
+    }
+  }
+
+  async function saveDay(day, doneList){
+    try{
+      localStorage.setItem(STORAGE_PREFIX + day, JSON.stringify(doneList));
+    }catch(e){
+      memoryFallback[day] = doneList;
+    }
+  }
+
+  function updateProgress(panel){
+    const total = panel.querySelectorAll('.card').length;
+    const done = panel.querySelectorAll('.card.done').length;
+    panel.querySelector('[data-progress]').textContent = done + '/' + total;
+  }
+
+  const COMPLETIONS_PREFIX = 'treino-completions:';
+  let completionsMemory = {};
+
+  async function loadCompletions(day){
+    try{
+      const raw = localStorage.getItem(COMPLETIONS_PREFIX + day);
+      return raw ? JSON.parse(raw) : 0;
+    }catch(e){
+      return completionsMemory[day] || 0;
+    }
+  }
+
+  async function saveCompletions(day, count){
+    try{
+      localStorage.setItem(COMPLETIONS_PREFIX + day, JSON.stringify(count));
+    }catch(e){
+      completionsMemory[day] = count;
+    }
+  }
+
+  async function refreshTotal(){
+    const days = ['seg','ter','qui','sex'];
+    let total = 0;
+    for(const d of days){ total += await loadCompletions(d); }
+    document.getElementById('totalCount').textContent = total;
+  }
+
+  async function initCompletionCount(panel){
+    const day = panel.dataset.day;
+    const count = await loadCompletions(day);
+    panel.querySelector('[data-complete-count]').textContent = count;
+  }
+
+  async function initDay(panel){
+    const day = panel.dataset.day;
+    const doneList = await loadDay(day);
+    panel.querySelectorAll('.card').forEach(card => {
+      if(doneList.includes(card.dataset.ex)){
+        card.classList.add('done');
+      }
+    });
+    updateProgress(panel);
+  }
+
+  document.querySelectorAll('.day-panel').forEach(panel => {
+    (async () => {
+      await renderLibAddedCards(panel);
+      await renderCustomCards(panel);
+      addAddCardUI(panel);
+      await applySavedSwaps(panel);
+      initDay(panel);
+    })();
+    initCompletionCount(panel);
+
+    panel.addEventListener('click', async (e) => {
+      const checkBtn = e.target.closest('[data-check]');
+      if(checkBtn){
+        const card = checkBtn.closest('.card');
+        card.classList.toggle('done');
+        updateProgress(panel);
+        const day = panel.dataset.day;
+        const doneList = Array.from(panel.querySelectorAll('.card.done')).map(c => c.dataset.ex);
+        await saveDay(day, doneList);
+        return;
+      }
+      const resetBtn = e.target.closest('[data-reset]');
+      if(resetBtn){
+        panel.querySelectorAll('.card').forEach(c => c.classList.remove('done'));
+        updateProgress(panel);
+        await saveDay(panel.dataset.day, []);
+        return;
+      }
+      const completeBtn = e.target.closest('[data-complete]');
+      if(completeBtn){
+        const day = panel.dataset.day;
+        const newCount = (await loadCompletions(day)) + 1;
+        await saveCompletions(day, newCount);
+        panel.querySelector('[data-complete-count]').textContent = newCount;
+        await refreshTotal();
+        panel.querySelectorAll('.card').forEach(c => c.classList.remove('done'));
+        updateProgress(panel);
+        await saveDay(day, []);
+      }
+    });
+  });
+
+  refreshTotal();
+
+  // ---- cronômetro de treino ----
+  let elapsedMs = 0;
+  let running = false;
+  let tickStart = null;
+  let tickHandle = null;
+
+  const clockDisplay = document.getElementById('clockDisplay');
+  const timerToggle = document.getElementById('timerToggle');
+  const timerReset = document.getElementById('timerReset');
+
+  function formatTime(ms){
+    const totalSec = Math.floor(ms / 1000);
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return h + ':' + m + ':' + s;
+  }
+
+  function renderClock(){
+    const current = running ? elapsedMs + (Date.now() - tickStart) : elapsedMs;
+    clockDisplay.textContent = formatTime(current);
+  }
+
+  function startTimer(){
+    running = true;
+    tickStart = Date.now();
+    clockDisplay.classList.add('running');
+    timerToggle.textContent = 'Pausar';
+    tickHandle = setInterval(renderClock, 1000);
+  }
+
+  function pauseTimer(){
+    running = false;
+    elapsedMs += Date.now() - tickStart;
+    clockDisplay.classList.remove('running');
+    timerToggle.textContent = 'Continuar';
+    clearInterval(tickHandle);
+    renderClock();
+  }
+
+  timerToggle.addEventListener('click', () => {
+    if(running){ pauseTimer(); } else { startTimer(); }
+  });
+
+  timerReset.addEventListener('click', () => {
+    running = false;
+    elapsedMs = 0;
+    clearInterval(tickHandle);
+    clockDisplay.classList.remove('running');
+    timerToggle.textContent = 'Iniciar';
+    renderClock();
+  });
+
+  const navButtons = document.querySelectorAll('#dayNav button');
+  const panels = document.querySelectorAll('.day-panel');
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      navButtons.forEach(b => b.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector('.day-panel[data-day="' + btn.dataset.day + '"]').classList.add('active');
+      btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    });
+  });
+</script>
+
+</body>
+</html>
