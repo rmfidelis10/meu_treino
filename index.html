@@ -395,7 +395,7 @@
     <button data-day="dom">Domingo</button>
   </nav>
 
-  <p class="total-bar">Treinos completos no total: <strong id="totalCount">0</strong></p>
+  <p class="total-bar">Treinos completos no total: <strong id="totalCount">0</strong> · <span id="syncStatus">…</span></p>
 
 
   <!-- SEGUNDA -->
@@ -718,6 +718,82 @@
 </div>
 
 <script>
+  // ---- sincronização com o n8n ----
+  const SYNC_URL = 'https://rmfidelis-n8n.ddns.net/webhook';
+  const SYNC_TOKEN = 'TROQUE-ESTE-TOKEN';
+  const META_KEY = 'treino-meta:updatedAt';
+  const DIRTY_KEY = 'treino-meta:dirty';
+  let syncTimer = null;
+
+  function setSyncStatus(txt){
+    const el = document.getElementById('syncStatus');
+    if(el) el.textContent = txt;
+  }
+
+  function lsSet(key, value){
+    localStorage.setItem(key, value);
+    localStorage.setItem(DIRTY_KEY, '1');
+    scheduleSync();
+  }
+
+  function collectState(){
+    const out = {};
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k.startsWith('treino-') && !k.startsWith('treino-meta:')) out[k] = localStorage.getItem(k);
+    }
+    return out;
+  }
+
+  function scheduleSync(){
+    clearTimeout(syncTimer);
+    setSyncStatus('salvando…');
+    syncTimer = setTimeout(pushState, 1500);
+  }
+
+  async function pushState(){
+    try{
+      const res = await fetch(SYNC_URL + '/treino-save', {
+        method: 'POST',
+        body: new URLSearchParams({ token: SYNC_TOKEN, data: JSON.stringify(collectState()) }),
+        keepalive: true
+      });
+      const json = await res.json();
+      if(json.ok){
+        localStorage.setItem(META_KEY, json.updatedAt);
+        localStorage.removeItem(DIRTY_KEY);
+        setSyncStatus('☁ sincronizado');
+      }else{
+        setSyncStatus('token inválido');
+      }
+    }catch(e){
+      setSyncStatus('offline (salvo só neste aparelho)');
+    }
+  }
+
+  async function syncOnLoad(){
+    try{
+      const res = await fetch(SYNC_URL + '/treino-load?token=' + encodeURIComponent(SYNC_TOKEN));
+      const json = await res.json();
+      if(!json.ok){ setSyncStatus('token inválido'); return; }
+
+      if(localStorage.getItem(DIRTY_KEY) === '1'){ await pushState(); return; }
+
+      if(json.data && json.updatedAt !== localStorage.getItem(META_KEY)){
+        Object.keys(collectState()).forEach(k => localStorage.removeItem(k));
+        Object.keys(json.data).forEach(k => localStorage.setItem(k, json.data[k]));
+        localStorage.setItem(META_KEY, json.updatedAt);
+        location.reload();
+        return;
+      }
+
+      if(!json.data && Object.keys(collectState()).length){ await pushState(); return; }
+      setSyncStatus('☁ sincronizado');
+    }catch(e){
+      setSyncStatus('offline (salvo só neste aparelho)');
+    }
+  }
+
   const DAY_COLOR = { seg:'#E8B23D', ter:'#6E9BC4', qua:'#9BA1A6', qui:'#E8B23D', sex:'#6E9BC4', sab:'#9BA1A6', dom:'#9BA1A6' };
 
   const ICON_BUILDERS = {
@@ -830,7 +906,7 @@
 
   async function saveSwaps(day, swaps){
     try{
-      localStorage.setItem(SWAPS_PREFIX + day, JSON.stringify(swaps));
+      lsSet(SWAPS_PREFIX + day, JSON.stringify(swaps));
     }catch(e){
       swapsMemory[day] = swaps;
     }
@@ -881,7 +957,7 @@
 
   async function saveCustom(day, list){
     try{
-      localStorage.setItem(CUSTOM_PREFIX + day, JSON.stringify(list));
+      lsSet(CUSTOM_PREFIX + day, JSON.stringify(list));
     }catch(e){
       customMemory[day] = list;
     }
@@ -996,7 +1072,7 @@
 
   async function saveLibAdded(day, list){
     try{
-      localStorage.setItem(LIBADDED_PREFIX + day, JSON.stringify(list));
+      lsSet(LIBADDED_PREFIX + day, JSON.stringify(list));
     }catch(e){
       libAddedMemory[day] = list;
     }
@@ -1109,7 +1185,7 @@
 
   async function saveDay(day, doneList){
     try{
-      localStorage.setItem(STORAGE_PREFIX + day, JSON.stringify(doneList));
+      lsSet(STORAGE_PREFIX + day, JSON.stringify(doneList));
     }catch(e){
       memoryFallback[day] = doneList;
     }
@@ -1135,7 +1211,7 @@
 
   async function saveCompletions(day, count){
     try{
-      localStorage.setItem(COMPLETIONS_PREFIX + day, JSON.stringify(count));
+      lsSet(COMPLETIONS_PREFIX + day, JSON.stringify(count));
     }catch(e){
       completionsMemory[day] = count;
     }
@@ -1273,6 +1349,7 @@
       btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     });
   });
+  syncOnLoad();
 </script>
 
 </body>
