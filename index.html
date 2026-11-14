@@ -187,7 +187,6 @@
     color: var(--muted);
     margin: -2px 0 18px;
   }
-  #syncStatus{ cursor: pointer; }
   .rest-select{
     background: var(--surface-2); color: var(--text);
     border: 1px solid var(--line); border-radius: 6px;
@@ -837,13 +836,6 @@
 <script>
   // ---- sincronização com o n8n ----
   const SYNC_URL = 'https://rmfidelis-n8n.ddns.net/webhook';
-  const TOKEN_KEY = 'treino-meta:token';
-  function getToken(){ return localStorage.getItem(TOKEN_KEY) || '50r48m2F*'; }
-  function askToken(){
-    const t = prompt('Digite o token de sincronização (o mesmo que está no n8n):');
-    if(t && t.trim()){ localStorage.setItem(TOKEN_KEY, t.trim()); return true; }
-    return false;
-  }
   const META_KEY = 'treino-meta:updatedAt';
   const DIRTY_KEY = 'treino-meta:dirty';
   let syncTimer = null;
@@ -875,11 +867,10 @@
   }
 
   async function pushState(){
-    if(!getToken()){ setSyncStatus('sem token (toque aqui)'); return; }
     try{
       const res = await fetch(SYNC_URL + '/treino-save', {
         method: 'POST',
-        body: new URLSearchParams({ token: getToken(), data: JSON.stringify(collectState()) }),
+        body: new URLSearchParams({ data: JSON.stringify(collectState()) }),
         keepalive: true
       });
       const json = await res.json();
@@ -888,7 +879,7 @@
         localStorage.removeItem(DIRTY_KEY);
         setSyncStatus('☁ sincronizado');
       }else{
-        setSyncStatus('token inválido (toque aqui)');
+        setSyncStatus('erro no servidor');
       }
     }catch(e){
       setSyncStatus('offline (salvo só neste aparelho)');
@@ -896,11 +887,10 @@
   }
 
   async function syncOnLoad(){
-    if(!getToken() && !askToken()){ setSyncStatus('sem token (toque aqui)'); return; }
     try{
-      const res = await fetch(SYNC_URL + '/treino-load?token=' + encodeURIComponent(getToken()));
+      const res = await fetch(SYNC_URL + '/treino-load');
       const json = await res.json();
-      if(!json.ok){ setSyncStatus('token inválido (toque aqui)'); return; }
+      if(!json.ok){ setSyncStatus('erro no servidor'); return; }
 
       if(localStorage.getItem(DIRTY_KEY) === '1'){ await pushState(); return; }
 
@@ -1904,7 +1894,6 @@
       btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     });
   });
-  document.getElementById('syncStatus').addEventListener('click', () => { if(askToken()) syncOnLoad(); });
   syncOnLoad();
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
 </script>
