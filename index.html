@@ -370,6 +370,24 @@
     color: var(--accent-color, var(--amber));
     font-size:12px; font-weight:700;
   }
+  .card-links{ display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:6px; }
+  .card-links button{ margin:0; }
+  .video-btn{
+    display:block; padding:0; background:transparent; border:none; cursor:pointer;
+    color: var(--muted); font-size:12px; font-weight:700;
+  }
+  .video-btn:hover{ color: var(--text); }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .chip{ position:relative; }
+  .add-form .chip input{ position:absolute; opacity:0; width:0; height:0; margin:0; padding:0; border:0; pointer-events:none; }
+  .chip span{
+    display:inline-block; padding:8px 14px; border:1px solid var(--line); border-radius:999px;
+    background: var(--surface-2); color: var(--muted); font-size:14px; font-weight:700; cursor:pointer;
+  }
+  .chip input:checked + span{
+    background: var(--accent-color, var(--amber)); border-color: var(--accent-color, var(--amber)); color:#1A1500;
+  }
+  .gen-form .add-form-actions{ flex-wrap:wrap; }
   .log{ display:none; flex: 0 0 100%; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
   .card.open .log{ display:block; }
   .log-head, .log-row{
@@ -820,7 +838,7 @@
   // ---- sincronização com o n8n ----
   const SYNC_URL = 'https://rmfidelis-n8n.ddns.net/webhook';
   const TOKEN_KEY = 'treino-meta:token';
-  function getToken(){ return localStorage.getItem(TOKEN_KEY) || '797524'; }
+  function getToken(){ return localStorage.getItem(TOKEN_KEY) || ''; }
   function askToken(){
     const t = prompt('Digite o token de sincronização (o mesmo que está no n8n):');
     if(t && t.trim()){ localStorage.setItem(TOKEN_KEY, t.trim()); return true; }
@@ -1110,9 +1128,10 @@
     return html;
   }
 
+  let libSeq = 0;
   function buildLibraryCardEl(day, cat, idx, color){
     const entry = EXERCISE_LIBRARY[cat][idx];
-    const slotId = 'lib-' + day + '-' + Date.now() + '-' + Math.floor(Math.random()*1000);
+    const slotId = 'lib-' + day + '-' + Date.now() + '-' + (++libSeq);
     const div = document.createElement('div');
     div.className = 'card';
     div.dataset.ex = slotId;
@@ -1194,13 +1213,40 @@
       const { el } = buildLibraryCardEl(day, item.category, item.idx, color);
       el.dataset.ex = item.id;
       el.querySelector('.swap-select').dataset.slot = item.id;
+      if(item.gen) el.dataset.gen = '1';
       panel.appendChild(el);
     });
+  }
+
+  function buildGenUI(){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <button class="add-card" data-gen-trigger>⚡ Gerar treino por grupos</button>
+      <div class="add-form gen-form" data-gen-form>
+        <p class="add-or">Escolha os grupos musculares que você quer treinar:</p>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" value="perna"><span>Perna</span></label>
+          <label class="chip"><input type="checkbox" value="peito"><span>Peito</span></label>
+          <label class="chip"><input type="checkbox" value="costas"><span>Costas</span></label>
+          <label class="chip"><input type="checkbox" value="ombro"><span>Ombro</span></label>
+          <label class="chip"><input type="checkbox" value="triceps"><span>Tríceps</span></label>
+          <label class="chip"><input type="checkbox" value="biceps"><span>Bíceps</span></label>
+        </div>
+        <p class="add-or" data-gen-msg></p>
+        <div class="add-form-actions">
+          <button class="save" data-gen-go>Gerar treino</button>
+          <button data-gen-clear>Remover gerado</button>
+          <button data-gen-cancel>Fechar</button>
+        </div>
+      </div>
+    `;
+    return wrap;
   }
 
   function addAddCardUI(panel){
     const ui = buildAddUI(panel.dataset.day);
     panel.appendChild(ui);
+    panel.appendChild(buildGenUI());
   }
 
 
@@ -1358,6 +1404,7 @@
       addAddCardUI(panel);
       await applySavedSwaps(panel);
       panel.querySelectorAll('.card').forEach(decorateCard);
+      applyFocus(panel);
       initDay(panel);
     })();
     initCompletionCount(panel);
@@ -1427,8 +1474,15 @@
     btn.className = 'log-toggle';
     btn.setAttribute('data-log-toggle', '');
     btn.textContent = 'Registrar séries';
+    const video = document.createElement('button');
+    video.className = 'video-btn';
+    video.setAttribute('data-video', '');
+    video.textContent = '▶ Ver vídeo';
+    const links = document.createElement('div');
+    links.className = 'card-links';
+    links.append(btn, video);
     const swap = body.querySelector('.swap-select');
-    if(swap) body.insertBefore(btn, swap); else body.appendChild(btn);
+    if(swap) body.insertBefore(links, swap); else body.appendChild(links);
   }
 
   function buildRow(r, i, prev){
@@ -1581,6 +1635,13 @@
   restSelect.addEventListener('change', () => lsSet(REST_KEY, restSelect.value));
 
   document.addEventListener('click', (e) => {
+    const vid = e.target.closest('[data-video]');
+    if(vid){
+      const nome = exName(vid.closest('.card')).replace(/\(.*?\)/g, '').trim();
+      const q = 'como fazer ' + nome + ' execução correta';
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank', 'noopener');
+      return;
+    }
     const toggle = e.target.closest('[data-log-toggle]');
     if(toggle){
       const card = toggle.closest('.card');
@@ -1644,6 +1705,140 @@
     }
   });
 
+
+  // ---- gerar treino por grupos musculares ----
+  const GEN_ORDER = ['perna', 'peito', 'costas', 'ombro', 'triceps', 'biceps'];
+  const GEN_PLAN = {
+    perna:   [['quad', 2], ['posterior', 1], ['gluteo', 1], ['panturrilha', 1]],
+    peito:   [['peito', 3]],
+    costas:  [['costas', 3]],
+    ombro:   [['ombro', 2]],
+    triceps: [['triceps', 2]],
+    biceps:  [['biceps', 2]]
+  };
+  const GEN_LABEL = { perna: 'perna', peito: 'peito', costas: 'costas', ombro: 'ombro', triceps: 'tríceps', biceps: 'bíceps' };
+  const GEN_MAX = 9;
+  const FOCUS_PREFIX = 'treino-focus:';
+  const FREE_DAYS = ['qua', 'sab', 'dom'];
+
+  function joinPt(arr){
+    return arr.length < 2 ? arr.join('') : arr.slice(0, -1).join(', ') + ' e ' + arr[arr.length - 1];
+  }
+  function setFocus(panel, text){
+    const s = panel.querySelector('.day-focus strong');
+    if(s) s.textContent = text;
+  }
+  function applyFocus(panel){
+    if(!FREE_DAYS.includes(panel.dataset.day)) return;
+    const t = localStorage.getItem(FOCUS_PREFIX + panel.dataset.day);
+    if(t) setFocus(panel, t);
+  }
+
+  function planFor(groups){
+    const items = [];
+    GEN_ORDER.filter(g => groups.includes(g)).forEach(g => GEN_PLAN[g].forEach(([cat, n]) => items.push({ cat, n })));
+    let total = items.reduce((s, i) => s + i.n, 0);
+    while(total > GEN_MAX){
+      const big = items.reduce((a, b) => (b.n > a.n ? b : a));
+      if(big.n <= 1) break;
+      big.n--; total--;
+    }
+    return items;
+  }
+
+  function pickIdx(cat, n){
+    const idxs = EXERCISE_LIBRARY[cat].map((_, i) => i);
+    for(let i = idxs.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+    }
+    return idxs.slice(0, Math.min(n, idxs.length)).sort((a, b) => a - b);
+  }
+
+  function insertCard(panel, el){
+    const trig = panel.querySelector('[data-add-trigger]');
+    trig.parentNode.insertBefore(el, trig);
+  }
+
+  async function removeGenerated(panel){
+    const day = panel.dataset.day;
+    let list = await loadLibAdded(day);
+    const oldIds = list.filter(i => i.gen).map(i => i.id);
+    panel.querySelectorAll('.card[data-gen="1"]').forEach(card => card.remove());
+    list = list.filter(i => !i.gen);
+    await saveLibAdded(day, list);
+    if(oldIds.length){
+      const done = await loadDay(day);
+      await saveDay(day, done.filter(id => !oldIds.includes(id)));
+      const logs = loadLogs(day);
+      oldIds.forEach(id => { delete logs[id]; });
+      saveLogs(day, logs);
+    }
+    return list;
+  }
+
+  async function generateWorkout(panel, groups){
+    const day = panel.dataset.day;
+    const color = DAY_COLOR[day];
+    const list = await removeGenerated(panel);
+    planFor(groups).forEach(({ cat, n }) => {
+      pickIdx(cat, n).forEach(idx => {
+        const { el, slotId } = buildLibraryCardEl(day, cat, idx, color);
+        el.dataset.gen = '1';
+        insertCard(panel, el);
+        decorateCard(el);
+        list.push({ id: slotId, category: cat, idx, gen: true });
+      });
+    });
+    await saveLibAdded(day, list);
+    if(FREE_DAYS.includes(day)){
+      const text = joinPt(GEN_ORDER.filter(g => groups.includes(g)).map(g => GEN_LABEL[g]));
+      lsSet(FOCUS_PREFIX + day, text);
+      setFocus(panel, text);
+    }
+    updateProgress(panel);
+  }
+
+  document.addEventListener('click', async (e) => {
+    const trig = e.target.closest('[data-gen-trigger]');
+    if(trig){
+      trig.nextElementSibling.classList.add('open');
+      trig.style.display = 'none';
+      return;
+    }
+    const cancel = e.target.closest('[data-gen-cancel]');
+    if(cancel){
+      const form = cancel.closest('[data-gen-form]');
+      form.classList.remove('open');
+      form.previousElementSibling.style.display = '';
+      return;
+    }
+    const clear = e.target.closest('[data-gen-clear]');
+    if(clear){
+      const form = clear.closest('[data-gen-form]');
+      const panel = form.closest('.day-panel');
+      await removeGenerated(panel);
+      if(FREE_DAYS.includes(panel.dataset.day)){
+        lsSet(FOCUS_PREFIX + panel.dataset.day, '');
+        setFocus(panel, 'a definir');
+      }
+      updateProgress(panel);
+      form.querySelector('[data-gen-msg]').textContent = 'Treino gerado removido.';
+      return;
+    }
+    const go = e.target.closest('[data-gen-go]');
+    if(go){
+      const form = go.closest('[data-gen-form]');
+      const panel = form.closest('.day-panel');
+      const groups = Array.from(form.querySelectorAll('.chip input:checked')).map(i => i.value);
+      const msg = form.querySelector('[data-gen-msg]');
+      if(!groups.length){ msg.textContent = 'Escolha pelo menos um grupo.'; return; }
+      msg.textContent = '';
+      await generateWorkout(panel, groups);
+      form.classList.remove('open');
+      form.previousElementSibling.style.display = '';
+    }
+  });
 
   // ---- cronômetro de treino ----
   let elapsedMs = 0;
