@@ -838,7 +838,7 @@
   // ---- sincronização com o n8n ----
   const SYNC_URL = 'https://rmfidelis-n8n.ddns.net/webhook';
   const TOKEN_KEY = 'treino-meta:token';
-  function getToken(){ return localStorage.getItem(TOKEN_KEY) || ''; }
+  function getToken(){ return localStorage.getItem(TOKEN_KEY) || '50r48m2F*'; }
   function askToken(){
     const t = prompt('Digite o token de sincronização (o mesmo que está no n8n):');
     if(t && t.trim()){ localStorage.setItem(TOKEN_KEY, t.trim()); return true; }
