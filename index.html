@@ -178,10 +178,20 @@
   .complete-btn:hover{ background: var(--accent-color, var(--amber)); color: #1A1500; }
 
   .total-bar{
-    text-align: right;
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 14px;
     font-size: 13px;
     color: var(--muted);
-    margin: -18px 0 20px;
+    margin: -2px 0 18px;
+  }
+  #syncStatus{ cursor: pointer; }
+  .rest-select{
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 6px;
+    font-size: 13px; padding: 4px 6px;
   }
   .total-bar strong{ color: var(--text); }
 
@@ -351,6 +361,70 @@
     .icon-box *{ animation: none !important; }
   }
 
+
+  /* ---- registro de séries ---- */
+  .card{ flex-wrap: wrap; }
+  .log-toggle{
+    display:block; margin-top:6px; padding:0;
+    background:transparent; border:none; cursor:pointer;
+    color: var(--accent-color, var(--amber));
+    font-size:12px; font-weight:700;
+  }
+  .log{ display:none; flex: 0 0 100%; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .card.open .log{ display:block; }
+  .log-head, .log-row{
+    display:grid;
+    grid-template-columns: 26px minmax(0,1fr) 64px 64px 38px;
+    gap: 8px; align-items:center;
+  }
+  .log-head{ font-size:11px; color: var(--muted); margin-bottom: 6px; text-align:center; }
+  .log-row{ margin-bottom: 6px; padding: 3px 0; border-radius: 6px; }
+  .log-row .n{ text-align:center; font-weight:700; font-size:13px; color: var(--muted); }
+  .log-row .prev{ text-align:center; font-size:12px; color: var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .log-row input{
+    width:100%; min-width:0; text-align:center;
+    background: var(--surface-2); border:1px solid var(--line); border-radius:6px;
+    color: var(--text); font-size:15px; font-weight:700; padding: 8px 2px;
+  }
+  .log-row input::placeholder{ color: var(--muted); font-weight:400; }
+  .set-check{
+    width:34px; height:34px; border-radius:8px; border:1px solid var(--line);
+    background: var(--surface-2); cursor:pointer; padding:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .set-check svg{ width:16px; height:16px; opacity:.35; }
+  .set-check svg path{ stroke: var(--text); }
+  .log-row.done .set-check{ background: var(--accent-color, var(--amber)); border-color: var(--accent-color, var(--amber)); }
+  .log-row.done .set-check svg{ opacity:1; }
+  .log-row.done .set-check svg path{ stroke: #1A1500; }
+  .log-row.done input{ opacity:.55; }
+  .log-actions{ display:flex; gap:8px; margin-top:8px; }
+  .log-actions button{
+    flex:1; background: var(--surface-2); border:1px solid var(--line); border-radius:7px;
+    color: var(--text); font-size:13px; font-weight:700; padding:8px; cursor:pointer;
+  }
+
+  /* ---- descanso ---- */
+  .rest-bar{
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    max-width: 860px; margin: 0 auto;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background: var(--surface); border: 1px solid var(--line); border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(110%); transition: transform .2s ease;
+  }
+  .rest-bar.show{ transform: none; }
+  .rest-bar .label{ font-size:12px; color: var(--muted); margin:0 0 2px; }
+  .rest-clock{ font-size:30px; font-weight:800; font-variant-numeric: tabular-nums; margin:0; line-height:1; }
+  .rest-bar.finished .rest-clock{ color: var(--amber); }
+  .rest-controls{ display:flex; gap:8px; }
+  .rest-controls button{
+    appearance:none; border:1px solid var(--line); background: var(--surface-2);
+    color: var(--text); font-size:13px; font-weight:700; padding:9px 12px; border-radius:7px; cursor:pointer;
+  }
+  .rest-controls button.primary{ background: var(--amber); border-color: var(--amber); color:#1A1500; }
+
   /* ---- animations ---- */
   @keyframes push{ 0%,100%{ transform: translateX(0); } 50%{ transform: translateX(10px); } }
   @keyframes hinge{ 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-38deg); } }
@@ -402,7 +476,13 @@
     <button data-day="dom">Domingo</button>
   </nav>
 
-  <p class="total-bar">Treinos completos no total: <strong id="totalCount">0</strong> · <span id="syncStatus">…</span></p>
+  <div class="total-bar">
+    <span>Descanso: <select id="restSelect" class="rest-select">
+      <option value="45">45 s</option><option value="60">60 s</option><option value="90">90 s</option>
+      <option value="120">2 min</option><option value="150">2:30</option><option value="180">3 min</option><option value="240">4 min</option>
+    </select></span>
+    <span>Treinos completos: <strong id="totalCount">0</strong> · <span id="syncStatus">…</span></span>
+  </div>
 
 
   <!-- SEGUNDA -->
@@ -724,10 +804,28 @@
 
 </div>
 
+<div class="rest-bar" id="restBar">
+  <div>
+    <p class="label">Descanso</p>
+    <p class="rest-clock" id="restClock">01:30</p>
+  </div>
+  <div class="rest-controls">
+    <button data-rest="-15">−15 s</button>
+    <button data-rest="15">+15 s</button>
+    <button data-rest="skip" class="primary">Pular</button>
+  </div>
+</div>
+
 <script>
   // ---- sincronização com o n8n ----
   const SYNC_URL = 'https://rmfidelis-n8n.ddns.net/webhook';
-  const SYNC_TOKEN = '797524Rm*';
+  const TOKEN_KEY = 'treino-meta:token';
+  function getToken(){ return localStorage.getItem(TOKEN_KEY) || '797524'; }
+  function askToken(){
+    const t = prompt('Digite o token de sincronização (o mesmo que está no n8n):');
+    if(t && t.trim()){ localStorage.setItem(TOKEN_KEY, t.trim()); return true; }
+    return false;
+  }
   const META_KEY = 'treino-meta:updatedAt';
   const DIRTY_KEY = 'treino-meta:dirty';
   let syncTimer = null;
@@ -759,10 +857,11 @@
   }
 
   async function pushState(){
+    if(!getToken()){ setSyncStatus('sem token (toque aqui)'); return; }
     try{
       const res = await fetch(SYNC_URL + '/treino-save', {
         method: 'POST',
-        body: new URLSearchParams({ token: SYNC_TOKEN, data: JSON.stringify(collectState()) }),
+        body: new URLSearchParams({ token: getToken(), data: JSON.stringify(collectState()) }),
         keepalive: true
       });
       const json = await res.json();
@@ -771,7 +870,7 @@
         localStorage.removeItem(DIRTY_KEY);
         setSyncStatus('☁ sincronizado');
       }else{
-        setSyncStatus('token inválido');
+        setSyncStatus('token inválido (toque aqui)');
       }
     }catch(e){
       setSyncStatus('offline (salvo só neste aparelho)');
@@ -779,10 +878,11 @@
   }
 
   async function syncOnLoad(){
+    if(!getToken() && !askToken()){ setSyncStatus('sem token (toque aqui)'); return; }
     try{
-      const res = await fetch(SYNC_URL + '/treino-load?token=' + encodeURIComponent(SYNC_TOKEN));
+      const res = await fetch(SYNC_URL + '/treino-load?token=' + encodeURIComponent(getToken()));
       const json = await res.json();
-      if(!json.ok){ setSyncStatus('token inválido'); return; }
+      if(!json.ok){ setSyncStatus('token inválido (toque aqui)'); return; }
 
       if(localStorage.getItem(DIRTY_KEY) === '1'){ await pushState(); return; }
 
@@ -941,6 +1041,7 @@
     const idx = sel.value;
     const entry = EXERCISE_LIBRARY[sel.dataset.category][idx];
     applyExercise(card, entry, DAY_COLOR[day]);
+    resetLog(card);
     sel.value = '';
     const swaps = await loadSwaps(day);
     swaps[sel.dataset.slot] = idx;
@@ -1133,6 +1234,7 @@
         const idx = parseInt(idxStr, 10);
         const { el, slotId } = buildLibraryCardEl(day, cat, idx, DAY_COLOR[day]);
         form.parentNode.insertBefore(el, form.previousElementSibling);
+        decorateCard(el);
         const list = await loadLibAdded(day);
         list.push({ id: slotId, category: cat, idx });
         await saveLibAdded(day, list);
@@ -1151,6 +1253,7 @@
       const item = { id: 'custom-' + day + '-' + Date.now(), name, sets };
       const card = buildCustomCardEl(day, item, DAY_COLOR[day]);
       form.parentNode.insertBefore(card, form.previousElementSibling);
+      decorateCard(card);
       const list = await loadCustom(day);
       list.push(item);
       await saveCustom(day, list);
@@ -1254,6 +1357,7 @@
       await renderCustomCards(panel);
       addAddCardUI(panel);
       await applySavedSwaps(panel);
+      panel.querySelectorAll('.card').forEach(decorateCard);
       initDay(panel);
     })();
     initCompletionCount(panel);
@@ -1274,6 +1378,7 @@
         panel.querySelectorAll('.card').forEach(c => c.classList.remove('done'));
         updateProgress(panel);
         await saveDay(panel.dataset.day, []);
+        clearSessionUI(panel);
         return;
       }
       const completeBtn = e.target.closest('[data-complete]');
@@ -1283,6 +1388,7 @@
         await saveCompletions(day, newCount);
         panel.querySelector('[data-complete-count]').textContent = newCount;
         await refreshTotal();
+        archiveSession(panel);
         panel.querySelectorAll('.card').forEach(c => c.classList.remove('done'));
         updateProgress(panel);
         await saveDay(day, []);
@@ -1291,6 +1397,253 @@
   });
 
   refreshTotal();
+
+  // ---- registro de séries (carga e repetições) + descanso ----
+  const LOG_PREFIX = 'treino-log:';
+  const LAST_KEY = 'treino-last';
+  const HIST_KEY = 'treino-history';
+  const REST_KEY = 'treino-rest-default';
+  const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function readJSON(key, fallback){
+    try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function dayOf(card){ return card.closest('.day-panel').dataset.day; }
+  function exName(card){ return card.querySelector('.name').textContent; }
+  function setsCount(card){
+    const n = parseInt(card.querySelector('.sets').textContent, 10);
+    return (n >= 1 && n <= 8) ? n : 3;
+  }
+  function loadLogs(day){ return readJSON(LOG_PREFIX + day, {}); }
+  function saveLogs(day, logs){ lsSet(LOG_PREFIX + day, JSON.stringify(logs)); }
+  function lastFor(name){ return readJSON(LAST_KEY, {})[name] || []; }
+  function currentElapsedMs(){ return running ? elapsedMs + (Date.now() - tickStart) : elapsedMs; }
+
+  function decorateCard(card){
+    const body = card.querySelector('.card-body');
+    if(!body || body.querySelector('[data-log-toggle]')) return;
+    const btn = document.createElement('button');
+    btn.className = 'log-toggle';
+    btn.setAttribute('data-log-toggle', '');
+    btn.textContent = 'Registrar séries';
+    const swap = body.querySelector('.swap-select');
+    if(swap) body.insertBefore(btn, swap); else body.appendChild(btn);
+  }
+
+  function buildRow(r, i, prev){
+    const row = document.createElement('div');
+    row.className = 'log-row' + (r.done ? ' done' : '');
+    const pk = prev && prev.kg ? String(prev.kg) : '';
+    const pr = prev && prev.reps ? String(prev.reps) : '';
+    row.dataset.prevKg = pk;
+    row.dataset.prevReps = pr;
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = String(i + 1);
+    const pv = document.createElement('span'); pv.className = 'prev';
+    pv.textContent = prev ? ((pk || '–') + ' × ' + (pr || '–')) : '–';
+    const kg = document.createElement('input');
+    kg.type = 'number'; kg.inputMode = 'decimal'; kg.step = '0.5'; kg.min = '0';
+    kg.setAttribute('data-kg', ''); kg.placeholder = pk || 'kg'; kg.value = r.kg || '';
+    const reps = document.createElement('input');
+    reps.type = 'number'; reps.inputMode = 'numeric'; reps.step = '1'; reps.min = '0';
+    reps.setAttribute('data-reps', ''); reps.placeholder = pr || 'reps'; reps.value = r.reps || '';
+    const btn = document.createElement('button');
+    btn.className = 'set-check'; btn.setAttribute('data-set-check', ''); btn.innerHTML = CHECK_SVG;
+    row.append(n, pv, kg, reps, btn);
+    return row;
+  }
+
+  function buildLog(card){
+    const slot = card.dataset.ex;
+    const saved = loadLogs(dayOf(card))[slot];
+    const rows = saved && saved.length ? saved
+      : Array.from({ length: setsCount(card) }, () => ({ kg: '', reps: '', done: false }));
+    const last = lastFor(exName(card));
+    const wrap = document.createElement('div');
+    wrap.className = 'log';
+    wrap.innerHTML = '<div class="log-head"><span>Série</span><span>Anterior</span><span>kg</span><span>Reps</span><span></span></div>' +
+      '<div class="log-rows"></div>' +
+      '<div class="log-actions"><button data-log-add>+ Série</button><button data-log-del>− Série</button></div>';
+    const body = wrap.querySelector('.log-rows');
+    rows.forEach((r, i) => body.appendChild(buildRow(r, i, last[i])));
+    card.appendChild(wrap);
+  }
+
+  function persistLog(card){
+    const day = dayOf(card);
+    const logs = loadLogs(day);
+    logs[card.dataset.ex] = Array.from(card.querySelectorAll('.log-row')).map(row => ({
+      kg: row.querySelector('[data-kg]').value,
+      reps: row.querySelector('[data-reps]').value,
+      done: row.classList.contains('done')
+    }));
+    saveLogs(day, logs);
+  }
+
+  function closeLogUI(card){
+    const l = card.querySelector('.log');
+    if(l) l.remove();
+    card.classList.remove('open');
+    const b = card.querySelector('[data-log-toggle]');
+    if(b) b.textContent = 'Registrar séries';
+  }
+
+  function resetLog(card){
+    closeLogUI(card);
+    const day = dayOf(card);
+    const logs = loadLogs(day);
+    if(logs[card.dataset.ex]){ delete logs[card.dataset.ex]; saveLogs(day, logs); }
+  }
+
+  function clearSessionUI(panel){
+    saveLogs(panel.dataset.day, {});
+    panel.querySelectorAll('.card').forEach(closeLogUI);
+  }
+
+  function archiveSession(panel){
+    const day = panel.dataset.day;
+    const logs = loadLogs(day);
+    const last = readJSON(LAST_KEY, {});
+    const exercises = [];
+    panel.querySelectorAll('.card').forEach(card => {
+      const rows = logs[card.dataset.ex];
+      if(!rows) return;
+      const sets = rows.filter(r => r.done || r.kg || r.reps).map(r => ({ kg: r.kg, reps: r.reps }));
+      if(!sets.length) return;
+      const name = exName(card);
+      last[name] = sets;
+      exercises.push({ name, sets });
+    });
+    if(exercises.length){
+      const hist = readJSON(HIST_KEY, []);
+      hist.push({ date: new Date().toISOString(), day, durationMs: currentElapsedMs(), exercises });
+      lsSet(LAST_KEY, JSON.stringify(last));
+      lsSet(HIST_KEY, JSON.stringify(hist));
+    }
+    clearSessionUI(panel);
+  }
+
+  // ---- descanso ----
+  let restEnd = 0;
+  let restTimer = null;
+  let audioCtx = null;
+
+  function restDefault(){ return Number(localStorage.getItem(REST_KEY)) || 90; }
+  function fmtSec(s){
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+  function beep(){
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.frequency.value = 880; g.gain.value = 0.15;
+      o.start(); o.stop(audioCtx.currentTime + 0.25);
+    }catch(e){}
+  }
+  function hideRest(){
+    clearInterval(restTimer); restTimer = null;
+    const bar = document.getElementById('restBar');
+    bar.classList.remove('show', 'finished');
+  }
+  function tickRest(){
+    const left = Math.ceil((restEnd - Date.now()) / 1000);
+    const clock = document.getElementById('restClock');
+    if(left <= 0){
+      clearInterval(restTimer); restTimer = null;
+      clock.textContent = 'Acabou!';
+      document.getElementById('restBar').classList.add('finished');
+      beep();
+      if(navigator.vibrate) navigator.vibrate([250, 120, 250]);
+      const myEnd = restEnd;
+      setTimeout(() => { if(restEnd === myEnd && !restTimer) hideRest(); }, 4000);
+      return;
+    }
+    clock.textContent = fmtSec(left);
+  }
+  function startRest(sec){
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === 'suspended') audioCtx.resume();
+    }catch(e){}
+    restEnd = Date.now() + (sec || restDefault()) * 1000;
+    const bar = document.getElementById('restBar');
+    bar.classList.remove('finished');
+    bar.classList.add('show');
+    clearInterval(restTimer);
+    restTimer = setInterval(tickRest, 250);
+    tickRest();
+  }
+
+  const restSelect = document.getElementById('restSelect');
+  restSelect.value = String(restDefault());
+  restSelect.addEventListener('change', () => lsSet(REST_KEY, restSelect.value));
+
+  document.addEventListener('click', (e) => {
+    const toggle = e.target.closest('[data-log-toggle]');
+    if(toggle){
+      const card = toggle.closest('.card');
+      if(!card.querySelector('.log')) buildLog(card);
+      const open = card.classList.toggle('open');
+      toggle.textContent = open ? 'Fechar séries' : 'Registrar séries';
+      return;
+    }
+    const setCheck = e.target.closest('[data-set-check]');
+    if(setCheck){
+      const row = setCheck.closest('.log-row');
+      const card = setCheck.closest('.card');
+      const done = !row.classList.contains('done');
+      row.classList.toggle('done', done);
+      if(done){
+        const kg = row.querySelector('[data-kg]');
+        const reps = row.querySelector('[data-reps]');
+        if(!kg.value && row.dataset.prevKg) kg.value = row.dataset.prevKg;
+        if(!reps.value && row.dataset.prevReps) reps.value = row.dataset.prevReps;
+        startRest();
+      }
+      persistLog(card);
+      const rows = Array.from(card.querySelectorAll('.log-row'));
+      if(done && rows.length && rows.every(r => r.classList.contains('done')) && !card.classList.contains('done')){
+        card.querySelector('[data-check]').click();
+      }
+      return;
+    }
+    const add = e.target.closest('[data-log-add]');
+    if(add){
+      const card = add.closest('.card');
+      const rowsEl = card.querySelector('.log-rows');
+      const i = rowsEl.children.length;
+      rowsEl.appendChild(buildRow({ kg: '', reps: '', done: false }, i, lastFor(exName(card))[i]));
+      persistLog(card);
+      return;
+    }
+    const del = e.target.closest('[data-log-del]');
+    if(del){
+      const card = del.closest('.card');
+      const rowsEl = card.querySelector('.log-rows');
+      if(rowsEl.children.length > 1){ rowsEl.lastElementChild.remove(); persistLog(card); }
+      return;
+    }
+    const rb = e.target.closest('[data-rest]');
+    if(rb){
+      const v = rb.dataset.rest;
+      if(v === 'skip'){ hideRest(); return; }
+      restEnd += Number(v) * 1000;
+      if(!restTimer && restEnd > Date.now()){
+        document.getElementById('restBar').classList.remove('finished');
+        restTimer = setInterval(tickRest, 250);
+      }
+      tickRest();
+    }
+  });
+
+  document.addEventListener('input', (e) => {
+    if(e.target.matches('[data-kg], [data-reps]')){
+      persistLog(e.target.closest('.card'));
+    }
+  });
+
 
   // ---- cronômetro de treino ----
   let elapsedMs = 0;
@@ -1356,6 +1709,7 @@
       btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     });
   });
+  document.getElementById('syncStatus').addEventListener('click', () => { if(askToken()) syncOnLoad(); });
   syncOnLoad();
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
 </script>
